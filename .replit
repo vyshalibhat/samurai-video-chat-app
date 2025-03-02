@@ -26,3 +26,7 @@ author = 40133461
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm start"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
