@@ -124,23 +124,6 @@ const VideoControl = () => {
 
             <video ref={videoRef} autoPlay playsInline className={`video-preview ${isRecording || recordedBlob ? '' : 'hidden'}`} />
 
-            {recordedBlob && (
-                <div className="recorded-section">
-                    <div className="button-container">
-                        <button className="small-button" onClick={playRecordedVideo}>
-                            ▶️ Play Your Message
-                        </button>
-                        <button className="small-button" onClick={uploadVideo} disabled={uploading}>
-                            ☁️ Analyze My Message
-                        </button>
-                    </div>
-                    {uploading && <p className="status">Analyzing your message...</p>}
-                    {detectedEmotion && (
-                        <p className="emotion">✅ Your Emotion: <strong>{detectedEmotion}</strong></p>
-                    )}
-                </div>
-            )}
-
             <p className="footer">💬 We are here to help you. Follow the simple steps above.</p>
         </div>
     );
