@@ -95,7 +95,13 @@ const VideoControl = () => {
             videoRef.current.srcObject = null;
             videoRef.current.src = videoURL;
             videoRef.current.controls = true;
-            videoRef.current.play();
+            
+            // Use a promise and catch any errors that might occur
+            videoRef.current.play()
+                .catch(error => {
+                    console.error("Error playing video:", error);
+                    alert("Could not play the video. Please try recording again.");
+                });
         } else {
             alert('No recorded video available.');
         }
