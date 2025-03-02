@@ -1,17 +1,28 @@
-entrypoint = "index.js"
-modules = ["nodejs-20"]
-hidden = [".config", "package-lock.json"]
 
-[gitHubImport]
-requiredFiles = [".replit", "replit.nix", "package.json", "package-lock.json"]
+hidden = [".config", "package-lock.json"]
+modules = ["nodejs-20"]
 
 [nix]
 channel = "stable-24_05"
-
-[unitTest]
-language = "nodejs"
 
 [deployment]
 run = "npm start"
 deploymentTarget = "cloudrun"
 ignorePorts = false
+
+[unitTest]
+language = "nodejs"
+
+[gitHubImport]
+requiredFiles = [".replit", "replit.nix", "package.json", "package-lock.json"]
+
+[workflows]
+runButton = "Start"
+
+[[workflows.workflow]]
+name = "Start"
+author = 40133461
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
