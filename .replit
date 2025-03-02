@@ -1,6 +1,6 @@
 
 hidden = [".config", "package-lock.json"]
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"
@@ -30,3 +30,7 @@ args = "npm start"
 [[ports]]
 localPort = 3000
 externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
