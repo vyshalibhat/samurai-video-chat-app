@@ -114,15 +114,45 @@ const VideoControl = () => {
             <p className="instructions">Press <strong>"Start Recording"</strong>, talk to us, then press <strong>"Stop Recording"</strong>.</p>
 
             <div className="button-container">
-                <button onClick={startRecording} disabled={isRecording} className="action-button start">
-                    🎥 Start Recording
+                <button 
+                    onClick={startRecording} 
+                    disabled={isRecording} 
+                    className={`action-button start ${isRecording ? 'pulse' : ''}`}
+                >
+                    {isRecording ? '📹 Recording...' : '🎥 Start Recording'}
                 </button>
-                <button onClick={stopRecording} disabled={!isRecording} className="action-button stop">
+                <button 
+                    onClick={stopRecording} 
+                    disabled={!isRecording} 
+                    className="action-button stop"
+                >
                     🛑 Stop Recording
                 </button>
             </div>
 
-            <video ref={videoRef} autoPlay playsInline className={`video-preview ${isRecording || recordedBlob ? '' : 'hidden'}`} />
+            <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className={`video-preview ${isRecording || recordedBlob ? '' : 'hidden'}`} 
+            />
+            
+            {recordedBlob && !isRecording && (
+                <div className="recorded-section">
+                    <button onClick={playRecordedVideo} className="small-button">
+                        ▶️ Play Recorded Video
+                    </button>
+                    <button onClick={uploadVideo} disabled={uploading} className="small-button">
+                        {uploading ? '⏳ Processing...' : '✅ Analyze My Mood'}
+                    </button>
+                </div>
+            )}
+            
+            {detectedEmotion && (
+                <div className="emotion">
+                    Detected Mood: <span className="highlighted-emotion">{detectedEmotion}</span>
+                </div>
+            )}
 
             <p className="footer">💬 We are here to help you. Follow the simple steps above.</p>
         </div>

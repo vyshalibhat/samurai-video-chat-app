@@ -1,0 +1,120 @@
+
+.chat-response-container {
+    margin-top: 30px;
+    padding: 20px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    text-align: center;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    animation: fadeIn 0.8s ease-in-out;
+}
+
+.chat-response-container h3 {
+    color: #2c3e50;
+    font-size: 22px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    animation: slideUp 0.6s ease-in-out;
+}
+
+.play-button {
+    padding: 12px 28px;
+    font-size: 16px;
+    cursor: pointer;
+    background: linear-gradient(to right, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px auto;
+    font-weight: 600;
+}
+
+.play-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 10px rgba(52, 152, 219, 0.4);
+}
+
+.play-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+.play-button:disabled {
+    background: linear-gradient(to right, #95a5a6, #7f8c8d);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.play-button-icon {
+    margin-right: 8px;
+    font-size: 1.2em;
+}
+
+.response-text {
+    padding: 15px;
+    border-radius: 8px;
+    background-color: rgba(236, 240, 241, 0.6);
+    margin-top: 15px;
+    text-align: left;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #34495e;
+    animation: fadeIn 1s ease-in-out;
+    display: none;
+}
+
+.show-text-button {
+    background: none;
+    border: none;
+    color: #3498db;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 14px;
+    padding: 5px;
+    transition: color 0.3s ease;
+}
+
+.show-text-button:hover {
+    color: #2980b9;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .chat-response-container {
+        margin: 20px 10px;
+        padding: 15px;
+    }
+    
+    .chat-response-container h3 {
+        font-size: 20px;
+    }
+}
