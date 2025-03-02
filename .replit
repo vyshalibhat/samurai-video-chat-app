@@ -6,7 +6,7 @@ modules = ["nodejs-20"]
 channel = "stable-24_05"
 
 [deployment]
-run = "npm start"
+run = ["sh", "-c", "bash run-dev.sh"]
 deploymentTarget = "cloudrun"
 ignorePorts = false
 
