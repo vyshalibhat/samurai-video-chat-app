@@ -2,3 +2,13 @@
 fastapi>=0.104.0
 uvicorn>=0.24.0
 python-multipart>=0.0.6
+
+# Add OpenCV
+opencv-contrib-python
+
+# Add PyTorch and torchvision
+torch
+torchvision
+
+ffmpeg-python
+#also do conda install -c conda-forge ffmpeg

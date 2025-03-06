@@ -2,161 +2,130 @@ import React, { useRef, useState } from "react";
 import "./VideoControl.css";
 
 const VideoControl = () => {
-    const videoRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
-    const [recordedBlob, setRecordedBlob] = useState(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [detectedEmotion, setDetectedEmotion] = useState("");
+  const videoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [detectedEmotion, setDetectedEmotion] = useState("");
 
-    const startRecording = async () => {
-        try {
-            console.log("Requesting webcam access...");
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true,
-            });
-            console.log("Webcam stream obtained:", stream);
+  // 1) Attempt multiple MIME types in order
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      videoRef.current.srcObject = stream;
 
-            videoRef.current.srcObject = stream;
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
+      // Priority list of mime types
+      const mimeTypes = [
+        "video/webm;codecs=vp9",
+        "video/mp4",
+        "video/avi",
+        "video/webm;codecs=vp8",
+      ];
 
-            const chunks = [];
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: "video/webm" });
-                setRecordedBlob(blob);
-
-                // Stop all tracks of the stream
-                stream.getTracks().forEach((track) => track.stop());
-                videoRef.current.srcObject = null;
-            };
-
-            mediaRecorder.start();
-            setIsRecording(true);
-        } catch (error) {
-            console.error("Error accessing media devices:", error);
-            alert(
-                "Could not access camera or microphone. Please ensure you've granted permission and try again.",
-            );
+      let chosenType = "";
+      for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          chosenType = type;
+          break;
         }
-    };
+      }
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
+      let mediaRecorder;
+      if (!chosenType) {
+        console.warn("No specified MIME types are supported, using default");
+        mediaRecorder = new MediaRecorder(stream);
+      } else {
+        console.log("Using MIME type:", chosenType);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: chosenType });
+      }
+      mediaRecorderRef.current = mediaRecorder;
+
+      const chunks = [];
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
         }
-    };
+      };
 
-    const uploadVideo = async () => {
-        if (!recordedBlob) {
-            alert("No recorded video available.");
-            return;
-        }
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+        setRecordedBlob(blob);
 
-        setUploading(true);
-        const formData = new FormData();
-        formData.append("video", recordedBlob, "recorded-video.webm");
+        // Stop camera
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      };
 
-        try {
-            // For testing, we'll just simulate a successful response
-            // If you have a real backend, replace this URL with your actual endpoint
-            console.log("Video would be uploaded to backend");
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing media devices:", err);
+    }
+  };
 
-            // Simulating a response
-            const fakeEmotions = [
-                "Happy",
-                "Neutral",
-                "Concerned",
-                "Thoughtful",
-            ];
-            const randomEmotion =
-                fakeEmotions[Math.floor(Math.random() * fakeEmotions.length)];
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
-            setDetectedEmotion(randomEmotion);
+  // 2) Upload the recorded file
+  const uploadVideo = async () => {
+    if (!recordedBlob) {
+      alert("No recorded video available.");
+      return;
+    }
 
-            /* Uncomment when you have a real backend
-            const response = await fetch('https://your-backend-url/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            const data = await response.json();
-            setDetectedEmotion(data.detected_emotion || 'Unknown');
-            */
-        } catch (error) {
-            console.error("Upload failed", error);
-            alert("We could not process your message. Please try again.");
-        } finally {
-            setUploading(false);
-        }
-    };
+    const formData = new FormData();
+    formData.append("file", recordedBlob, "recorded-video.webm");
 
-    const playRecordedVideo = () => {
-        if (recordedBlob && videoRef.current) {
-            const videoURL = URL.createObjectURL(recordedBlob);
-            videoRef.current.srcObject = null;
-            videoRef.current.src = videoURL;
-            videoRef.current.controls = true;
+    try {
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        body: formData,
+      });
 
-            // Use a promise and catch any errors that might occur
-            videoRef.current.play().catch((error) => {
-                console.error("Error playing video:", error);
-                alert("Could not play the video. Please try recording again.");
-            });
-        } else {
-            alert("No recorded video available.");
-        }
-    };
+      const data = await response.json();
+      if (data.error) {
+        alert(data.error);
+      } else {
+        setDetectedEmotion(data.predicted_emotion);
+        console.log("Scores:", data.scores);
+      }
+    } catch (err) {
+      console.error("Error uploading video:", err);
+    }
+  };
 
-    return (
-        <div className="dementia-container">
-            <h1>Welcome to SamurAI</h1>
-            <p className="instructions">
-                👋 Let's record your message so we can understand how you're
-                feeling today.
-            </p>
-            <p className="instructions">
-                Press <strong>"Start Recording"</strong>, talk to us, then press{" "}
-                <strong>"Stop Recording"</strong>.
-            </p>
+  return (
+    <div className="video-container">
+      <h1>Record Your Emotion</h1>
 
-            <div className="button-container">
-                <button
-                    onClick={startRecording}
-                    disabled={isRecording}
-                    className={`action-button start ${isRecording ? "pulse" : ""}`}
-                >
-                    {isRecording ? "📹 Recording..." : "🎥 Start Recording"}
-                </button>
-                <button
-                    onClick={stopRecording}
-                    disabled={!isRecording}
-                    className="action-button stop"
-                >
-                    🛑 Stop Recording
-                </button>
-            </div>
+      <video ref={videoRef} autoPlay muted playsInline />
 
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className={`video-preview ${isRecording || recordedBlob ? "" : "hidden"}`}
-            />
+      <div>
+        <button onClick={startRecording} disabled={isRecording}>
+          Start Recording
+        </button>
+        <button onClick={stopRecording} disabled={!isRecording}>
+          Stop Recording
+        </button>
+        <button onClick={uploadVideo} disabled={!recordedBlob}>
+          Upload Video
+        </button>
+      </div>
 
-            <p className="footer">
-                💬 We are here to help you. Follow the simple steps above.
-            </p>
-        </div>
-    );
+      {detectedEmotion && (
+        <p>
+          Detected Emotion: <strong>{detectedEmotion}</strong>
+        </p>
+      )}
+    </div>
+  );
 };
 
 export default VideoControl;
