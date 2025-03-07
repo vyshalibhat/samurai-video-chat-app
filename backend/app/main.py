@@ -62,10 +62,23 @@ def convert_to_mp4(input_path: str, output_path: str):
     to .mp4 (H.264 + AAC).
     """
     try:
-        stream = ffmpeg.input(input_path)
-        stream = ffmpeg.output(stream, output_path, vcodec='libx264', acodec='aac', strict='-2')
-        ffmpeg.run(stream, overwrite_output=True)
-        return output_path
+        # Ensure input file exists
+        if not os.path.exists(input_path):
+            print(f"Input file does not exist: {input_path}")
+            return None
+            
+        # Run the conversion directly with simpler approach
+        cmd = f"ffmpeg -i {input_path} -c:v libx264 -c:a aac {output_path} -y"
+        print(f"Running command: {cmd}")
+        os.system(cmd)
+        
+        # Verify the output was created
+        if os.path.exists(output_path):
+            print(f"Successfully converted to: {output_path}")
+            return output_path
+        else:
+            print(f"Failed to create output file: {output_path}")
+            return None
     except Exception as e:
         print(f"Error in convert_to_mp4: {str(e)}")
         return None
@@ -131,19 +144,42 @@ async def predict_emotion(file: UploadFile = File(...)):
     4) Run inference
     """
     try:
+        print(f"Received file: {file.filename}, content_type: {file.content_type}")
+        
         # Step A: Save the incoming file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_video:
-            temp_video.write(await file.read())
+            content = await file.read()
+            print(f"File size: {len(content)} bytes")
+            temp_video.write(content)
             input_path = temp_video.name
-
+            
+        print(f"Saved to: {input_path}")
+        
         # Step B: Convert to mp4
         output_path = input_path.replace(".webm", ".mp4")
-        convert_to_mp4(input_path, output_path)
-        os.remove(input_path)  # remove the original .webm
+        conversion_result = convert_to_mp4(input_path, output_path)
+        
+        if not conversion_result:
+            return {"error": "Failed to convert video format"}
+            
+        # Keep the original file until we're sure conversion worked
+        try:
+            os.remove(input_path)  # remove the original .webm
+            print(f"Removed original file: {input_path}")
+        except Exception as e:
+            print(f"Could not remove original file: {e}")
 
         # Step C: Prepare frames
         input_tensor = process_video(output_path)
-        os.remove(output_path)  # optional cleanup
+        
+        try:
+            os.remove(output_path)  # optional cleanup
+            print(f"Removed converted file: {output_path}")
+        except Exception as e:
+            print(f"Could not remove converted file: {e}")
+            
+        if input_tensor is None:
+            return {"error": "Insufficient frames or decode failure."}
 
         if input_tensor is None:
             return {"error": "Insufficient frames or decode failure."}
