@@ -30,11 +30,21 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # In production, you'd list specific origins
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["Content-Type", "Content-Length"],
 )
+
+@app.get("/")
+def read_root():
+    return {"message": "Backend API is running"}
+
+@app.options("/predict")
+async def options_predict():
+    # Handle preflight requests
+    return {}
 
 # Instantiate your model (this triggers the .pth check / GDrive download if needed)
 try:

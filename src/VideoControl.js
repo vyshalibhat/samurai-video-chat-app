@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
 
@@ -84,44 +85,50 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      // Use relative URL or window.location.origin to handle different environments
-      const backendUrl =
-        window.location.hostname === "localhost"
-          ? "http://localhost:8000/predict"
-          : "/api/predict";
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/predict";
+      } else {
+        // For Replit environment
+        backendUrl = "/predict";
+      }
 
+      console.log("Sending request to:", backendUrl);
+      
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
-      // Check if the response status is OK
+      // Check if response is ok
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
 
-      // Get response as text first for debugging
+      // Get the text response first for debugging
       const responseText = await response.text();
-      console.log("Response text:", responseText);
-      let data2;
+      console.log("Raw response:", responseText);
 
+      let data;
       try {
-        data2 = JSON.parse(responseText);
+        // Parse the text as JSON
+        data = JSON.parse(responseText);
       } catch (jsonErr) {
-        console.error("Failed to parse JSON:", jsonErr);
+        console.error("Failed to parse JSON response:", jsonErr);
         alert("Invalid response format from server");
         return;
       }
 
       if (data.error) {
-        alert(data.error);
+        alert(`Error from server: ${data.error}`);
       } else {
-        setDetectedEmotion(data2.predicted_emotion);
-        console.log("Scores:", data2.scores);
+        setDetectedEmotion(data.predicted_emotion || "Unknown");
+        console.log("Emotion scores:", data.scores);
       }
     } catch (err) {
       console.error("Error uploading video:", err);
+      alert(`Error: ${err.message}`);
     }
   };
 
