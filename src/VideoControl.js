@@ -87,22 +87,41 @@ const VideoControl = () => {
       // Use relative URL or window.location.origin to handle different environments
       const backendUrl = window.location.hostname === 'localhost' 
         ? 'http://localhost:8000/predict'
-        : '/api/predict';
+        : 'http://0.0.0.0:8000/predict';
         
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      // First check if response is ok
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      // Log the raw response for debugging
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+      
+      // Try to parse JSON safely
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error("JSON parsing error:", jsonError);
+        alert("Error processing response from server");
+        return;
+      }
+      
       if (data.error) {
         alert(data.error);
       } else {
-        setDetectedEmotion(data.predicted_emotion);
+        setDetectedEmotion(data.predicted_emotion || "Unknown");
         console.log("Scores:", data.scores);
       }
     } catch (err) {
       console.error("Error uploading video:", err);
+      alert("Error: " + err.message);
     }
   };
 
