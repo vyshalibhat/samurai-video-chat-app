@@ -84,7 +84,12 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://0.0.0.0:8000/predict", {
+      // Use relative URL or window.location.origin to handle different environments
+      const backendUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:8000/predict'
+        : '/api/predict';
+        
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
