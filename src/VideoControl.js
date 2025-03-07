@@ -90,8 +90,8 @@ const VideoControl = () => {
       if (window.location.hostname === "localhost") {
         backendUrl = "http://localhost:8000/predict";
       } else {
-        // For Replit environment
-        backendUrl = "/predict";
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/predict`;
       }
 
       console.log("Sending request to:", backendUrl);
