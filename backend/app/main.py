@@ -67,10 +67,18 @@ def convert_to_mp4(input_path: str, output_path: str):
             print(f"Input file does not exist: {input_path}")
             return None
             
-        # Run the conversion directly with simpler approach
-        cmd = f"ffmpeg -i {input_path} -c:v libx264 -c:a aac {output_path} -y"
-        print(f"Running command: {cmd}")
-        os.system(cmd)
+        # Make sure the conversion happens with proper shell escape
+        import subprocess
+        cmd = ["ffmpeg", "-i", input_path, "-c:v", "libx264", "-c:a", "aac", "-strict", "-2", output_path, "-y"]
+        print(f"Running command: {' '.join(cmd)}")
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            print(f"FFMPEG stdout: {result.stdout}")
+        except subprocess.CalledProcessError as e:
+            print(f"FFMPEG error: {e}")
+            print(f"FFMPEG stderr: {e.stderr}")
+            return None
         
         # Verify the output was created
         if os.path.exists(output_path):

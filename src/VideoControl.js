@@ -121,6 +121,7 @@ const VideoControl = () => {
       }
 
       if (data.error) {
+        console.error("Server error:", data.error);
         alert(`Error from server: ${data.error}`);
       } else {
         setDetectedEmotion(data.predicted_emotion || "Unknown");
