@@ -139,22 +139,37 @@ const VideoControl = () => {
 
       <video ref={videoRef} autoPlay muted playsInline />
 
-      <div>
-        <button onClick={startRecording} disabled={isRecording}>
-          Start Recording
+      <div className="button-container">
+        <button 
+          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
+          onClick={startRecording} 
+          disabled={isRecording}>
+          <i className="fas fa-video"></i> Start Recording
         </button>
-        <button onClick={stopRecording} disabled={!isRecording}>
-          Stop Recording
+        <button 
+          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
+          onClick={stopRecording} 
+          disabled={!isRecording}>
+          <i className="fas fa-stop-circle"></i> Stop Recording
         </button>
-        <button onClick={uploadVideo} disabled={!recordedBlob}>
-          Upload Video
+        <button 
+          className={`action-button upload ${!recordedBlob ? 'disabled' : ''}`} 
+          onClick={uploadVideo} 
+          disabled={!recordedBlob}>
+          <i className="fas fa-cloud-upload-alt"></i> Analyze Emotion
         </button>
       </div>
 
+      {recordedBlob && !detectedEmotion && (
+        <p className="status">Recording ready for analysis</p>
+      )}
+      
       {detectedEmotion && (
-        <p>
-          Detected Emotion: <strong>{detectedEmotion}</strong>
-        </p>
+        <div className="emotion-container">
+          <p className="emotion">
+            Detected Emotion: <span className="emotion-value">{detectedEmotion}</span>
+          </p>
+        </div>
       )}
     </div>
   );
