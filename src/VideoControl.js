@@ -1,3 +1,5 @@
+// VideoControl.js
+
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
 
@@ -7,6 +9,8 @@ const VideoControl = () => {
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState("");
+  const [transcribedText, setTranscribedText] = useState(""); // NEW state for transcript
+  const [llmResponse, setLlmResponse] = useState("");         // NEW state for LLM response
 
   // 1) Attempt multiple MIME types in order
   const startRecording = async () => {
@@ -81,6 +85,7 @@ const VideoControl = () => {
     }
 
     const formData = new FormData();
+    // Using "recorded-video.webm" as filename; your backend will handle both webm and mp4
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
@@ -93,7 +98,10 @@ const VideoControl = () => {
       if (data.error) {
         alert(data.error);
       } else {
+        // Update state with emotion, transcription, and LLM response
         setDetectedEmotion(data.predicted_emotion);
+        setTranscribedText(data.transcribed_text); // NEW: Set transcript
+        setLlmResponse(data.llm_response);           // NEW: Set LLM reply
         console.log("Scores:", data.scores);
       }
     } catch (err) {
@@ -122,6 +130,16 @@ const VideoControl = () => {
       {detectedEmotion && (
         <p>
           Detected Emotion: <strong>{detectedEmotion}</strong>
+        </p>
+      )}
+      {transcribedText && (
+        <p>
+          Transcribed Speech: <strong>{transcribedText}</strong>
+        </p>
+      )}
+      {llmResponse && (
+        <p>
+          LLM Response: <strong>{llmResponse}</strong>
         </p>
       )}
     </div>
