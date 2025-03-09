@@ -57,7 +57,12 @@ const VideoControl = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
         setRecordedBlob(blob);
-
+        
+          // Debug: create a preview URL and open it in a new tab
+        const previewUrl = URL.createObjectURL(blob);
+        console.log("Preview URL:", previewUrl);
+        window.open(previewUrl, "_blank");
+        
         // Stop camera
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
