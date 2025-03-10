@@ -9,10 +9,10 @@ const VideoControl = () => {
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState("");
-  const [transcribedText, setTranscribedText] = useState(""); // NEW state for transcript
-  const [llmResponse, setLlmResponse] = useState("");         // NEW state for LLM response
+  const [transcribedText, setTranscribedText] = useState(""); // For transcript
+  const [llmResponse, setLlmResponse] = useState("");         // For LLM output
 
-  // 1) Attempt multiple MIME types in order
+  // 1) Start recording using webcam (with audio and video)
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -57,10 +57,10 @@ const VideoControl = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
         setRecordedBlob(blob);
-        // Debug: log preview URL (manually open it in a browser if needed)
+        // For debugging: log the preview URL (copy-paste it to test playback)
         const previewUrl = URL.createObjectURL(blob);
         console.log("Preview URL:", previewUrl);
-        // Stop the stream
+        // Stop the camera stream
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
       };
@@ -72,6 +72,7 @@ const VideoControl = () => {
     }
   };
 
+  // 2) Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -79,7 +80,7 @@ const VideoControl = () => {
     }
   };
 
-  // 2) Upload the recorded file to the backend
+  // 3) Upload the recorded file to the backend and update states with the response
   const uploadVideo = async () => {
     if (!recordedBlob) {
       alert("No recorded video available.");
@@ -125,8 +126,8 @@ const VideoControl = () => {
         alert(`Error from server: ${data.error}`);
       } else {
         setDetectedEmotion(data.predicted_emotion || "Unknown");
-        setTranscribedText(data.transcribed_text || "");
-        setLlmResponse(data.llm_response || "");
+        setTranscribedText(data.transcribed_text || ""); // Set transcript
+        setLlmResponse(data.llm_response || "");         // Set LLM response
         console.log("Emotion scores:", data.scores);
       }
     } catch (err) {
@@ -151,17 +152,17 @@ const VideoControl = () => {
         </button>
       </div>
       {detectedEmotion && (
-        <p>
+        <p className="emotion">
           Detected Emotion: <strong>{detectedEmotion}</strong>
         </p>
       )}
       {transcribedText && (
-        <p>
+        <p className="transcript">
           Transcribed Speech: <strong>{transcribedText}</strong>
         </p>
       )}
       {llmResponse && (
-        <p>
+        <p className="llm">
           LLM Response: <strong>{llmResponse}</strong>
         </p>
       )}
