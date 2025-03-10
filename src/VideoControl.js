@@ -1,3 +1,4 @@
+// VideoControl.js
 
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
@@ -8,6 +9,8 @@ const VideoControl = () => {
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState("");
+  const [transcribedText, setTranscribedText] = useState(""); // NEW state for transcript
+  const [llmResponse, setLlmResponse] = useState("");         // NEW state for LLM response
 
   // 1) Attempt multiple MIME types in order
   const startRecording = async () => {
@@ -18,7 +21,7 @@ const VideoControl = () => {
       });
       videoRef.current.srcObject = stream;
 
-      // Priority list of mime types
+      // Priority list of MIME types
       const mimeTypes = [
         "video/webm;codecs=vp9",
         "video/mp4",
@@ -36,7 +39,7 @@ const VideoControl = () => {
 
       let mediaRecorder;
       if (!chosenType) {
-        console.warn("No specified MIME types are supported, using default");
+        console.warn("No specified MIME types supported, using default");
         mediaRecorder = new MediaRecorder(stream);
       } else {
         console.log("Using MIME type:", chosenType);
@@ -54,8 +57,10 @@ const VideoControl = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
         setRecordedBlob(blob);
-
-        // Stop camera
+        // Debug: log preview URL (manually open it in a browser if needed)
+        const previewUrl = URL.createObjectURL(blob);
+        console.log("Preview URL:", previewUrl);
+        // Stop the stream
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
       };
@@ -74,7 +79,7 @@ const VideoControl = () => {
     }
   };
 
-  // 2) Upload the recorded file
+  // 2) Upload the recorded file to the backend
   const uploadVideo = async () => {
     if (!recordedBlob) {
       alert("No recorded video available.");
@@ -84,35 +89,30 @@ const VideoControl = () => {
     const formData = new FormData();
     formData.append("file", recordedBlob, "recorded-video.webm");
 
-    try {
-      // Determine API URL based on environment
-      let backendUrl;
-      if (window.location.hostname === "localhost") {
-        backendUrl = "http://localhost:8000/predict";
-      } else {
-        // For Replit environment - use the full URL with port 8000
-        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/predict`;
-      }
+    // Determine API URL based on environment
+    let backendUrl;
+    if (window.location.hostname === "localhost") {
+      backendUrl = "http://localhost:8000/predict";
+    } else {
+      backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/predict`;
+    }
+    console.log("Sending request to:", backendUrl);
 
-      console.log("Sending request to:", backendUrl);
-      
+    try {
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
 
-      // Check if response is ok
       if (!response.ok) {
         throw new Error(`Server responded with status: ${response.status}`);
       }
 
-      // Get the text response first for debugging
       const responseText = await response.text();
       console.log("Raw response:", responseText);
 
       let data;
       try {
-        // Parse the text as JSON
         data = JSON.parse(responseText);
       } catch (jsonErr) {
         console.error("Failed to parse JSON response:", jsonErr);
@@ -125,6 +125,8 @@ const VideoControl = () => {
         alert(`Error from server: ${data.error}`);
       } else {
         setDetectedEmotion(data.predicted_emotion || "Unknown");
+        setTranscribedText(data.transcribed_text || "");
+        setLlmResponse(data.llm_response || "");
         console.log("Emotion scores:", data.scores);
       }
     } catch (err) {
@@ -136,40 +138,32 @@ const VideoControl = () => {
   return (
     <div className="video-container">
       <h1>Record Your Emotion</h1>
-
       <video ref={videoRef} autoPlay muted playsInline />
-
       <div className="button-container">
-        <button 
-          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
-          onClick={startRecording} 
-          disabled={isRecording}>
-          <i className="fas fa-video"></i> Start Recording
+        <button onClick={startRecording} disabled={isRecording}>
+          Start Recording
         </button>
-        <button 
-          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
-          onClick={stopRecording} 
-          disabled={!isRecording}>
-          <i className="fas fa-stop-circle"></i> Stop Recording
+        <button onClick={stopRecording} disabled={!isRecording}>
+          Stop Recording
         </button>
-        <button 
-          className={`action-button upload ${!recordedBlob ? 'disabled' : ''}`} 
-          onClick={uploadVideo} 
-          disabled={!recordedBlob}>
-          <i className="fas fa-cloud-upload-alt"></i> Analyze Emotion
+        <button onClick={uploadVideo} disabled={!recordedBlob}>
+          Upload Video
         </button>
       </div>
-
-      {recordedBlob && !detectedEmotion && (
-        <p className="status">Recording ready for analysis</p>
-      )}
-      
       {detectedEmotion && (
-        <div className="emotion-container">
-          <p className="emotion">
-            Detected Emotion: <span className="emotion-value">{detectedEmotion}</span>
-          </p>
-        </div>
+        <p>
+          Detected Emotion: <strong>{detectedEmotion}</strong>
+        </p>
+      )}
+      {transcribedText && (
+        <p>
+          Transcribed Speech: <strong>{transcribedText}</strong>
+        </p>
+      )}
+      {llmResponse && (
+        <p>
+          LLM Response: <strong>{llmResponse}</strong>
+        </p>
       )}
     </div>
   );
