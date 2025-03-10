@@ -1,4 +1,3 @@
-// VideoControl.js
 
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
@@ -9,8 +8,6 @@ const VideoControl = () => {
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [detectedEmotion, setDetectedEmotion] = useState("");
-  const [transcribedText, setTranscribedText] = useState(""); // NEW state for transcript
-  const [llmResponse, setLlmResponse] = useState("");         // NEW state for LLM response
 
   // 1) Attempt multiple MIME types in order
   const startRecording = async () => {
@@ -57,10 +54,7 @@ const VideoControl = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
         setRecordedBlob(blob);
-          // Debug: create a preview URL and open it in a new tab
-        const previewUrl = URL.createObjectURL(blob);
-        console.log("Preview URL:", previewUrl);
-        window.open(previewUrl, "_blank");
+
         // Stop camera
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
@@ -88,27 +82,54 @@ const VideoControl = () => {
     }
 
     const formData = new FormData();
-    // Using "recorded-video.webm" as filename; your backend will handle both webm and mp4
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/predict", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/predict";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/predict`;
+      }
+
+      console.log("Sending request to:", backendUrl);
+      
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
 
-      const data = await response.json();
+      // Check if response is ok
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      // Get the text response first for debugging
+      const responseText = await response.text();
+      console.log("Raw response:", responseText);
+
+      let data;
+      try {
+        // Parse the text as JSON
+        data = JSON.parse(responseText);
+      } catch (jsonErr) {
+        console.error("Failed to parse JSON response:", jsonErr);
+        alert("Invalid response format from server");
+        return;
+      }
+
       if (data.error) {
-        alert(data.error);
+        console.error("Server error:", data.error);
+        alert(`Error from server: ${data.error}`);
       } else {
-        // Update state with emotion, transcription, and LLM response
-        setDetectedEmotion(data.predicted_emotion);
-        setTranscribedText(data.transcribed_text); // NEW: Set transcript
-        setLlmResponse(data.llm_response);           // NEW: Set LLM reply
-        console.log("Scores:", data.scores);
+        setDetectedEmotion(data.predicted_emotion || "Unknown");
+        console.log("Emotion scores:", data.scores);
       }
     } catch (err) {
       console.error("Error uploading video:", err);
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -118,32 +139,37 @@ const VideoControl = () => {
 
       <video ref={videoRef} autoPlay muted playsInline />
 
-      <div>
-        <button onClick={startRecording} disabled={isRecording}>
-          Start Recording
+      <div className="button-container">
+        <button 
+          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
+          onClick={startRecording} 
+          disabled={isRecording}>
+          <i className="fas fa-video"></i> Start Recording
         </button>
-        <button onClick={stopRecording} disabled={!isRecording}>
-          Stop Recording
+        <button 
+          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
+          onClick={stopRecording} 
+          disabled={!isRecording}>
+          <i className="fas fa-stop-circle"></i> Stop Recording
         </button>
-        <button onClick={uploadVideo} disabled={!recordedBlob}>
-          Upload Video
+        <button 
+          className={`action-button upload ${!recordedBlob ? 'disabled' : ''}`} 
+          onClick={uploadVideo} 
+          disabled={!recordedBlob}>
+          <i className="fas fa-cloud-upload-alt"></i> Analyze Emotion
         </button>
       </div>
 
+      {recordedBlob && !detectedEmotion && (
+        <p className="status">Recording ready for analysis</p>
+      )}
+      
       {detectedEmotion && (
-        <p>
-          Detected Emotion: <strong>{detectedEmotion}</strong>
-        </p>
-      )}
-      {transcribedText && (
-        <p>
-          Transcribed Speech: <strong>{transcribedText}</strong>
-        </p>
-      )}
-      {llmResponse && (
-        <p>
-          LLM Response: <strong>{llmResponse}</strong>
-        </p>
+        <div className="emotion-container">
+          <p className="emotion">
+            Detected Emotion: <span className="emotion-value">{detectedEmotion}</span>
+          </p>
+        </div>
       )}
     </div>
   );
