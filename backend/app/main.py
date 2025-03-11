@@ -31,6 +31,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # In production, you'd list specific origins
+    allow_origin_regex=r"https?://.*\.replit\.dev(:[0-9]+)?",  # Allow all Replit domains
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],

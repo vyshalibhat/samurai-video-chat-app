@@ -17,10 +17,12 @@ const VideoControl = () => {
 
   const startRecording = async () => {
     try {
+      console.log("Requesting webcam and audio access...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
+      console.log("Media access granted:", stream);
       videoRef.current.srcObject = stream;
 
       const mimeTypes = [
@@ -137,7 +139,18 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/transcribe", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/transcribe";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/transcribe`;
+      }
+
+      console.log("Sending transcription request to:", backendUrl);
+      
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
@@ -175,7 +188,18 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/process_all", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/process_all";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/process_all`;
+      }
+
+      console.log("Sending process_all request to:", backendUrl);
+      
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
