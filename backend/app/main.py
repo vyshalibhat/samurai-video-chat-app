@@ -12,6 +12,12 @@ import torch
 import torch.nn.functional as F
 import subprocess
 
+# 1) Import the 1st model (Emotion) + 3rd model (LLM)
+ from .model_downloader import EmotionResNet3D, DementiaHelperLLM
+
+ # 2) Import faster-whisper for STT
+ from faster_whisper import WhisperModel
+
 # Here we would import the model + Google Drive logic
 # If you prefer, you can import from "model.py" or unify them
 try:
@@ -44,6 +50,16 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Type", "Content-Length"],
 )
+
+# Instantiate Emotion model + LLM
+emotion_model = EmotionResNet3D(model_path="6emotions_resnet3dV2.pth")
+llm_model = DementiaHelperLLM(model_path="dementiahelperllm.pth")
+
+# Choose GPU if available, else CPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+compute_type = "float16" if device == "cuda" else "int8"
+
+print("Device set to:", device, "compute_type:", compute_type)
 
 
 @app.get("/")
@@ -159,6 +175,12 @@ def process_video(video_path: str):
 def read_root():
     return {"message": "Emotion Analysis API"}
 
+# Fix: pass `model_size_or_path` as the first param
+whisper_model = WhisperModel(
+    model_size_or_path="base",   # or 'tiny', 'small', 'medium', 'large'
+    device=device,
+    compute_type=compute_type
+)
 
 def extract_audio_from_video(video_path: str, audio_path: str):
     command = f'ffmpeg -i "{video_path}" -q:a 0 -map a "{audio_path}" -y'
