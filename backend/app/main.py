@@ -143,6 +143,9 @@ def process_video(video_path: str):
 def read_root():
     return {"message": "Emotion Analysis API"}
 
+def extract_audio_from_video(video_path: str, audio_path: str):
+    command = f'ffmpeg -i "{video_path}" -q:a 0 -map a "{audio_path}" -y'
+    subprocess.run(command, shell=True, check=True)
 
 @app.post("/predict")
 async def predict_emotion(file: UploadFile = File(...)):
@@ -215,3 +218,98 @@ async def predict_emotion(file: UploadFile = File(...)):
     except Exception as e:
         print(f"Error in predict_emotion: {str(e)}")
         return {"error": str(e)}
+
+@app.post("/process_all")
+async def process_all(file: UploadFile = File(...)):
+    """
+    1) Emotion (model 1)
+    2) Transcribe (faster-whisper, model 2)
+    3) LLM (model 3)
+    """
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_vid:
+            tmp_vid.write(await file.read())
+            webm_path = tmp_vid.name
+
+        mp4_path = webm_path.replace(".webm", ".mp4")
+        convert_to_mp4(webm_path, mp4_path)
+        os.remove(webm_path)
+
+        # EMOTION
+        input_tensor = process_video_for_emotion(mp4_path)
+        if input_tensor is None:
+            os.remove(mp4_path)
+            raise HTTPException(status_code=500, detail="Insufficient frames or decode failure for emotion model.")
+
+        with torch.no_grad():
+            logits = emotion_model.predict(input_tensor)
+            probs = F.softmax(logits[0], dim=0)
+            emotions = emotion_model.emotions
+            scores = {emotions[i]: float(probs[i]) for i in range(len(emotions))}
+            predicted_emotion = max(scores, key=scores.get)
+
+        # STT
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
+            wav_path = tmp_wav.name
+
+        extract_audio_from_video(mp4_path, wav_path)
+        os.remove(mp4_path)
+
+        segments, info = whisper_model.transcribe(wav_path)
+        os.remove(wav_path)
+        transcription = " ".join(seg.text for seg in segments)
+
+        # LLM
+        llm_response = llm_model.generate_response(transcription, predicted_emotion)
+
+        return {
+            "predicted_emotion": predicted_emotion,
+            "transcription": transcription,
+            "llm_response": llm_response
+        }
+
+    except subprocess.CalledProcessError as ffmpeg_err:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ffmpeg failed to extract audio: {str(ffmpeg_err)}"
+        )
+    except Exception as e:
+        print("ERROR in /process_all:", repr(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error during processing: {str(e)}"
+        )
+
+@app.post("/transcribe")
+async def transcribe_video(file: UploadFile = File(...)):
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_vid:
+            tmp_vid.write(await file.read())
+            webm_path = tmp_vid.name
+
+        mp4_path = webm_path.replace(".webm", ".mp4")
+        convert_to_mp4(webm_path, mp4_path)
+        os.remove(webm_path)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_wav:
+            wav_path = tmp_wav.name
+
+        extract_audio_from_video(mp4_path, wav_path)
+        os.remove(mp4_path)
+
+        segments, info = whisper_model.transcribe(wav_path)
+        os.remove(wav_path)
+
+        transcription = " ".join(seg.text for seg in segments)
+        return JSONResponse(content={"transcription": transcription})
+
+    except subprocess.CalledProcessError as ffmpeg_err:
+        raise HTTPException(
+            status_code=500,
+            detail=f"ffmpeg failed to extract audio: {str(ffmpeg_err)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error during transcription: {str(e)}"
+        )
