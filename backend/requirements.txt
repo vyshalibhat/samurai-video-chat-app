@@ -12,3 +12,7 @@ torchvision
 
 ffmpeg-python
 #also do conda install -c conda-forge ffmpeg
+
+librosa
+faster-whisper
+transformers

@@ -1,14 +1,20 @@
+// VideoControl.js
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
 
 const VideoControl = () => {
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+
+  // Recorded data
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [detectedEmotion, setDetectedEmotion] = useState("");
 
-  // 1) Attempt multiple MIME types in order
+  // Outputs
+  const [detectedEmotion, setDetectedEmotion] = useState("");
+  const [transcribedText, setTranscribedText] = useState("");
+  const [llmResponse, setLlmResponse] = useState("");
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -17,12 +23,11 @@ const VideoControl = () => {
       });
       videoRef.current.srcObject = stream;
 
-      // Priority list of mime types
       const mimeTypes = [
+        "video/webm;codecs=vp8",
         "video/webm;codecs=vp9",
         "video/mp4",
         "video/avi",
-        "video/webm;codecs=vp8",
       ];
 
       let chosenType = "";
@@ -53,7 +58,6 @@ const VideoControl = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
         setRecordedBlob(blob);
-
         // Stop camera
         stream.getTracks().forEach((track) => track.stop());
         videoRef.current.srcObject = null;
@@ -73,12 +77,16 @@ const VideoControl = () => {
     }
   };
 
-  // 2) Upload the recorded file
-  const uploadVideo = async () => {
+  // ------------------------------------------------------------------
+  // 1) Upload for Emotion => POST /predict
+  //    We only reset "detectedEmotion" so old transcription & LLM remain
+  // ------------------------------------------------------------------
+  const handleUploadForEmotion = async () => {
     if (!recordedBlob) {
       alert("No recorded video available.");
       return;
     }
+    setDetectedEmotion("(loading...)");
 
     const formData = new FormData();
     formData.append("file", recordedBlob, "recorded-video.webm");
@@ -88,22 +96,117 @@ const VideoControl = () => {
         method: "POST",
         body: formData,
       });
-
       const data = await response.json();
+
       if (data.error) {
         alert(data.error);
+        setDetectedEmotion("");
       } else {
         setDetectedEmotion(data.predicted_emotion);
-        console.log("Scores:", data.scores);
+        console.log("Emotion Scores:", data.scores);
       }
     } catch (err) {
-      console.error("Error uploading video:", err);
+      console.error("Error uploading video for emotion:", err);
+      setDetectedEmotion("");
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // 2) Upload for Transcription => POST /transcribe
+  //    We only reset "transcribedText" so old emotion & LLM remain
+  // ------------------------------------------------------------------
+  const handleUploadForTranscription = async () => {
+    if (!recordedBlob) {
+      alert("No recorded video available.");
+      return;
+    }
+    setTranscribedText("(loading...)");
+
+    const formData = new FormData();
+    formData.append("file", recordedBlob, "recorded-video.webm");
+
+    try {
+      const response = await fetch("http://localhost:8000/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (data.detail) {
+        alert(data.detail);
+        setTranscribedText("");
+      } else if (data.transcription) {
+        setTranscribedText(data.transcription);
+        console.log("Transcription:", data.transcription);
+      }
+    } catch (err) {
+      console.error("Error uploading video for transcription:", err);
+      setTranscribedText("");
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // 3) Upload for Everything => POST /process_all
+  //    Overwrites all fields, but only if successful
+  // ------------------------------------------------------------------
+  const handleProcessAll = async () => {
+    if (!recordedBlob) {
+      alert("No recorded video available.");
+      return;
+    }
+
+    // Optional: show loading text
+    setDetectedEmotion("(loading...)");
+    setTranscribedText("(loading...)");
+    setLlmResponse("(loading...)");
+
+    const formData = new FormData();
+    formData.append("file", recordedBlob, "recorded-video.webm");
+
+    try {
+      const response = await fetch("http://localhost:8000/process_all", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        // We can handle 4xx/5xx errors more explicitly:
+        const errorText = await response.text();
+        console.error("Server error at /process_all:", errorText);
+        alert(`Error: ${errorText}`);
+        // Clear the loading states, or revert them
+        setDetectedEmotion("");
+        setTranscribedText("");
+        setLlmResponse("");
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        alert(data.error);
+        // Clear the loading states
+        setDetectedEmotion("");
+        setTranscribedText("");
+        setLlmResponse("");
+      } else {
+        setDetectedEmotion(data.predicted_emotion);
+        setTranscribedText(data.transcription);
+        setLlmResponse(data.llm_response);
+        console.log("All results:", data);
+      }
+    } catch (err) {
+      console.error("Error uploading video for combined processing:", err);
+      // Clear the loading states
+      setDetectedEmotion("");
+      setTranscribedText("");
+      setLlmResponse("");
     }
   };
 
   return (
     <div className="video-container">
-      <h1>Record Your Emotion</h1>
+      <h1>Record Your Emotion &amp; Transcription</h1>
 
       <video ref={videoRef} autoPlay muted playsInline />
 
@@ -114,16 +217,30 @@ const VideoControl = () => {
         <button onClick={stopRecording} disabled={!isRecording}>
           Stop Recording
         </button>
-        <button onClick={uploadVideo} disabled={!recordedBlob}>
-          Upload Video
+      </div>
+
+      <div>
+        <button onClick={handleUploadForEmotion} disabled={!recordedBlob}>
+          Upload for Emotion
+        </button>
+        <button onClick={handleUploadForTranscription} disabled={!recordedBlob}>
+          Upload for Transcription
+        </button>
+        <button onClick={handleProcessAll} disabled={!recordedBlob}>
+          Upload for Emotion + Transcription + LLM
         </button>
       </div>
 
-      {detectedEmotion && (
-        <p>
-          Detected Emotion: <strong>{detectedEmotion}</strong>
-        </p>
-      )}
+      {/* Show the results */}
+      <p>
+        <strong>Detected Emotion:</strong> {detectedEmotion}
+      </p>
+      <p>
+        <strong>Transcribed Text:</strong> {transcribedText}
+      </p>
+      <p>
+        <strong>LLM Response:</strong> {llmResponse}
+      </p>
     </div>
   );
 };
