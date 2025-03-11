@@ -92,7 +92,18 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/predict", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/predict";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/predict`;
+      }
+
+      console.log("Sending request to:", backendUrl);
+      
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
@@ -210,12 +221,18 @@ const VideoControl = () => {
 
       <video ref={videoRef} autoPlay muted playsInline />
 
-      <div>
-        <button onClick={startRecording} disabled={isRecording}>
-          Start Recording
+      <div className="button-container">
+        <button 
+          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
+          onClick={startRecording} 
+          disabled={isRecording}>
+          <i className="fas fa-video"></i> Start Recording
         </button>
-        <button onClick={stopRecording} disabled={!isRecording}>
-          Stop Recording
+        <button 
+          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
+          onClick={stopRecording} 
+          disabled={!isRecording}>
+          <i className="fas fa-stop-circle"></i> Stop Recording
         </button>
       </div>
 

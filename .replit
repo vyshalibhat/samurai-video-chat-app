@@ -25,7 +25,7 @@ author = 40133461
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm start"
+args = "bash ./src/run-dev.sh"
 
 [[ports]]
 localPort = 3000
