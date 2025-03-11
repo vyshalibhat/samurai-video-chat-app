@@ -13,42 +13,24 @@ import torch.nn.functional as F
 import subprocess
 
 # 1) Import the 1st model (Emotion) + 3rd model (LLM)
- from .model_downloader import EmotionResNet3D, DementiaHelperLLM
+from .model_downloader import EmotionResNet3D, DementiaHelperLLM
 
  # 2) Import faster-whisper for STT
- from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel
 
 # Here we would import the model + Google Drive logic
 # If you prefer, you can import from "model.py" or unify them
-try:
-    from .model_downloader import EmotionResNet3D
-except ImportError:
-    # For development/testing, provide a mock model
-    class EmotionResNet3D:
-
-        def __init__(self, model_path=None):
-            self.emotions = [
-                "angry", "disgust", "fear", "happy", "sad", "surprise",
-                "neutral"
-            ]
-            print(f"Mock model initialized with path: {model_path}")
-
-        def predict(self, tensor):
-            # Return random logits for testing
-            return torch.randn(1, len(self.emotions))
 
 
 app = FastAPI()
 
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, you'd list specific origins
-    allow_origin_regex=
-    r"https?://.*\.replit\.dev(:[0-9]+)?",  # Allow all Replit domains
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["Content-Type", "Content-Length"],
 )
 
 # Instantiate Emotion model + LLM

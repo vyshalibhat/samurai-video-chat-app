@@ -1,6 +1,7 @@
 // VideoControl.js
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
+import AudioChatResponse from "./AudioChatResponse";
 
 const VideoControl = () => {
   const videoRef = useRef(null);
@@ -104,7 +105,7 @@ const VideoControl = () => {
       }
 
       console.log("Sending request to:", backendUrl);
-      
+
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
@@ -149,7 +150,7 @@ const VideoControl = () => {
       }
 
       console.log("Sending transcription request to:", backendUrl);
-      
+
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
@@ -198,7 +199,7 @@ const VideoControl = () => {
       }
 
       console.log("Sending process_all request to:", backendUrl);
-      
+
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
@@ -246,29 +247,43 @@ const VideoControl = () => {
       <video ref={videoRef} autoPlay muted playsInline />
 
       <div className="button-container">
-        <button 
-          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
-          onClick={startRecording} 
-          disabled={isRecording}>
+        <button
+          className={`action-button start ${isRecording ? "disabled" : ""}`}
+          onClick={startRecording}
+          disabled={isRecording}
+        >
           <i className="fas fa-video"></i> Start Recording
         </button>
-        <button 
-          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
-          onClick={stopRecording} 
-          disabled={!isRecording}>
+        <button
+          className={`action-button stop ${!isRecording ? "disabled" : ""}`}
+          onClick={stopRecording}
+          disabled={!isRecording}
+        >
           <i className="fas fa-stop-circle"></i> Stop Recording
         </button>
       </div>
 
-      <div>
-        <button onClick={handleUploadForEmotion} disabled={!recordedBlob}>
-          Upload for Emotion
+      <div className="button-container">
+        <button
+          className="action-button emotion"
+          onClick={handleUploadForEmotion}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-smile"></i> Analyze Emotion
         </button>
-        <button onClick={handleUploadForTranscription} disabled={!recordedBlob}>
-          Upload for Transcription
+        <button
+          className="action-button emotion"
+          onClick={handleUploadForTranscription}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-comment-alt"></i> Transcribe Speech
         </button>
-        <button onClick={handleProcessAll} disabled={!recordedBlob}>
-          Upload for Emotion + Transcription + LLM
+        <button
+          className="action-button emotion"
+          onClick={handleProcessAll}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-magic"></i> Ask Samurai
         </button>
       </div>
 
@@ -282,6 +297,8 @@ const VideoControl = () => {
       <p>
         <strong>LLM Response:</strong> {llmResponse}
       </p>
+
+      <AudioChatResponse replyText={llmResponse} />
     </div>
   );
 };
