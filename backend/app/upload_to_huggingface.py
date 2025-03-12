@@ -13,13 +13,13 @@ def upload_emotion_model():
     )
     print("Emotion model upload complete!")
 
-def upload_llm_model():
+ddef upload_llm_model():
     """Upload the 3rd model (LLM) to HF."""
     api = HfApi()
     api.upload_file(
-        path_or_fileobj="dementiahelperllm.pth",
-        path_in_repo="dementiahelperllm.pth",
-        repo_id="Joylim/DementiaHelperLLM",  # Your 3rd model's repo
+        path_or_fileobj="dementiahelperllm7.pth",  # local filename
+        path_in_repo="dementiahelperllm7.pth",     # how it appears on HF
+        repo_id="Joylim/DementiaHelperLLM",        # Your 3rd model's repo
         repo_type="model",
     )
     print("LLM model upload complete!")

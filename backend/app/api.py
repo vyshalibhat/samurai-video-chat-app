@@ -29,8 +29,9 @@ app.add_middleware(
 )
 
 # Instantiate Emotion model + LLM
+# NOTE: use "dementiahelperllm7.pth" to match your code in model_downloader.py
 emotion_model = EmotionResNet3D(model_path="6emotions_resnet3dV2.pth")
-llm_model = DementiaHelperLLM(model_path="dementiahelperllm.pth")
+llm_model = DementiaHelperLLM(model_path="dementiahelperllm7.pth")
 
 # Choose GPU if available, else CPU
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,9 +39,9 @@ compute_type = "float16" if device == "cuda" else "int8"
 
 print("Device set to:", device, "compute_type:", compute_type)
 
-# Fix: pass `model_size_or_path` as the first param
+# Initialize faster-whisper
 whisper_model = WhisperModel(
-    model_size_or_path="base",   # or 'tiny', 'small', 'medium', 'large'
+    model_size_or_path="base",   # 'tiny', 'small', 'medium', or 'large'
     device=device,
     compute_type=compute_type
 )
@@ -157,7 +158,7 @@ async def transcribe_video(file: UploadFile = File(...)):
 async def process_all(file: UploadFile = File(...)):
     """
     1) Emotion (model 1)
-    2) Transcribe (faster-whisper, model 2)
+    2) Transcribe speech (faster-whisper, model 2)
     3) LLM (model 3)
     """
     try:
