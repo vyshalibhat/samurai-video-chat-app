@@ -27,6 +27,14 @@ author = 40133461
 task = "shell.exec"
 args = "bash ./src/run-dev.sh"
 
+[[workflows.workflow]]
+name = "Backend API"
+author = 40133461
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && ./run.sh"
+
 [[ports]]
 localPort = 3000
 externalPort = 80

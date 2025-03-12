@@ -1,6 +1,7 @@
 // VideoControl.js
 import React, { useRef, useState } from "react";
 import "./VideoControl.css";
+import AudioChatResponse from "./AudioChatResponse";
 
 const VideoControl = () => {
   const videoRef = useRef(null);
@@ -17,10 +18,12 @@ const VideoControl = () => {
 
   const startRecording = async () => {
     try {
+      console.log("Requesting webcam and audio access...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
+      console.log("Media access granted:", stream);
       videoRef.current.srcObject = stream;
 
       const mimeTypes = [
@@ -102,7 +105,7 @@ const VideoControl = () => {
       }
 
       console.log("Sending request to:", backendUrl);
-      
+
       const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
@@ -137,7 +140,18 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/transcribe", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/transcribe";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/transcribe`;
+      }
+
+      console.log("Sending transcription request to:", backendUrl);
+
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
@@ -175,7 +189,18 @@ const VideoControl = () => {
     formData.append("file", recordedBlob, "recorded-video.webm");
 
     try {
-      const response = await fetch("http://localhost:8000/process_all", {
+      // Determine API URL based on environment
+      let backendUrl;
+      if (window.location.hostname === "localhost") {
+        backendUrl = "http://localhost:8000/process_all";
+      } else {
+        // For Replit environment - use the full URL with port 8000
+        backendUrl = `${window.location.protocol}//${window.location.hostname}:8000/process_all`;
+      }
+
+      console.log("Sending process_all request to:", backendUrl);
+
+      const response = await fetch(backendUrl, {
         method: "POST",
         body: formData,
       });
@@ -222,29 +247,43 @@ const VideoControl = () => {
       <video ref={videoRef} autoPlay muted playsInline />
 
       <div className="button-container">
-        <button 
-          className={`action-button start ${isRecording ? 'disabled' : ''}`} 
-          onClick={startRecording} 
-          disabled={isRecording}>
+        <button
+          className={`action-button start ${isRecording ? "disabled" : ""}`}
+          onClick={startRecording}
+          disabled={isRecording}
+        >
           <i className="fas fa-video"></i> Start Recording
         </button>
-        <button 
-          className={`action-button stop ${!isRecording ? 'disabled' : ''}`} 
-          onClick={stopRecording} 
-          disabled={!isRecording}>
+        <button
+          className={`action-button stop ${!isRecording ? "disabled" : ""}`}
+          onClick={stopRecording}
+          disabled={!isRecording}
+        >
           <i className="fas fa-stop-circle"></i> Stop Recording
         </button>
       </div>
 
-      <div>
-        <button onClick={handleUploadForEmotion} disabled={!recordedBlob}>
-          Upload for Emotion
+      <div className="button-container">
+        <button
+          className="action-button emotion"
+          onClick={handleUploadForEmotion}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-smile"></i> Analyze Emotion
         </button>
-        <button onClick={handleUploadForTranscription} disabled={!recordedBlob}>
-          Upload for Transcription
+        <button
+          className="action-button emotion"
+          onClick={handleUploadForTranscription}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-comment-alt"></i> Transcribe Speech
         </button>
-        <button onClick={handleProcessAll} disabled={!recordedBlob}>
-          Upload for Emotion + Transcription + LLM
+        <button
+          className="action-button emotion"
+          onClick={handleProcessAll}
+          disabled={!recordedBlob}
+        >
+          <i className="fas fa-magic"></i> Ask Samurai
         </button>
       </div>
 
@@ -258,6 +297,8 @@ const VideoControl = () => {
       <p>
         <strong>LLM Response:</strong> {llmResponse}
       </p>
+
+      <AudioChatResponse replyText={llmResponse} />
     </div>
   );
 };
